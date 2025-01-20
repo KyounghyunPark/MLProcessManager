@@ -1,0 +1,60 @@
+services:
+  server:
+    build:
+      context: .
+    env_file:
+      - .env.docker
+    environment:
+      NODE_ENV: production
+      AUTH_TRUST_HOST: true
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres
+    user: postgres
+    secrets:
+      - db-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=etri
+      - POSTGRES_DB=etrigg
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+    restart: always
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api: &main_app
+    build:
+      context: ./etri-gg-py
+      dockerfile: ./Dockerfile
+    image: etri_gg_py:${ETRI_GG_PY_VERSION:-latest}
+    volumes:
+      - ./etri-gg-py/data_big_input:/app/data_big_input
+      - ./etri-gg-py/data_big_input:/app/data_input
+      - ./etri-gg-py/data_big_input:/app/data_output
+    restart: always
+    environment:
+      ETRI_GG_PY_HOST: 0.0.0.0
+
+
+  nginx:
+    restart: always
+    image: nginx:1-alpine
+    ports:
+      - "8380:8380"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+
+
+volumes:
+  db-data:
+secrets:
+  db-password:
+    file: db/password.txt
+

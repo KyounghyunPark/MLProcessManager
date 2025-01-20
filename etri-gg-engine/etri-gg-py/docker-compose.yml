@@ -1,0 +1,13 @@
+services:
+  api: &main_app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: etri_gg_py:${ETRI_GG_PY_VERSION:-latest}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      ETRI_GG_PY_HOST: 0.0.0.0
+
+
